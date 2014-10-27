@@ -1,0 +1,121 @@
+/*********COLOR REFERENCE GUIDE***********************
+main color scheme:
+red: #BC1D1D
+black: #000000
+grey: #F0F0F0
+
+More Grays:
+#AFAFAF
+
+Gold color scale:
+pale goldenrod yellow: #FAFAD2;
+khaki: #F0E68C;
+gold: #FFD700;
+goldenrod: #DAA520;
+*****************************************************/
+
+/**************FONT CODE REFERENCE GUIDE**************
+font-family: 'Coda Caption', sans-serif;
+*****************************************************/
+
+body{
+/*body styling written from scratch*/
+	background-color: #BC1D1D;
+}
+.inline{
+/*class written from scratch*/
+	display: inline;
+}
+
+.title{
+/*class written from scratch*/
+	font-family: 'Coda Caption', sans-serif;
+	font-size: 36px;
+	/*removes line break above <p> element*/
+	display: inline;
+	/*gradient text coloring effect, 
+	only works in Chrome & Safari*/
+	background: -webkit-linear-gradient(
+	#FAFAD2 0%,
+	#F0E68C 20%,
+	#FFD700 50%,
+	#DAA520 80%
+	);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+.sans{
+/*class written from scratch*/
+	font-family: sans-serif;
+}
+
+/********************RIBBON MENU***********************
+Comment: old navigation bar code taken from:
+http://www.jacklmoore.com/notes/css3-ribbon-menu/
+element was removed from final design
+******************************************************/
+/*Forked Edges*/
+.ribbon {
+	display:inline;
+}
+.title{
+	margin-top: 0px;
+	float:left;
+}
+.ribbon:after, .ribbon:before {
+    margin-top:0.5em;
+    content: "";
+    float:left;
+    border:1.5em solid #fff;
+}
+.ribbon:after {
+    border-right-color:transparent;
+}
+.ribbon:before {
+    border-left-color:transparent;
+}
+/*Links*/
+.ribbon a:link, .ribbon a:visited { 
+    color:#000;
+    text-decoration:none;
+    float:left;
+    height:3.5em;
+    overflow:hidden;
+}
+/*Animation*/
+.ribbon span {
+    background:#fff;
+    display:inline-block;
+    line-height:3em;
+    padding:0 1em;
+    margin-top:0.5em;
+    position:relative;
+
+    -webkit-transition: background-color 0.2s, margin-top 0.2s;  /* Saf3.2+, Chrome */
+    -moz-transition: background-color 0.2s, margin-top 0.2s;  /* FF4+ */
+    -ms-transition: background-color 0.2s, margin-top 0.2s;  /* IE10 */
+    -o-transition: background-color 0.2s, margin-top 0.2s;  /* Opera 10.5+ */
+    transition: background-color 0.2s, margin-top 0.2s;
+}
+.ribbon a:hover span {
+    background:#FFD204;
+    margin-top:0;
+}
+.ribbon span:before {
+    content: "";
+    position:absolute;
+    top:3em;
+    left:0;
+    border-right:0.5em solid #9B8651;
+    border-bottom:0.5em solid #fff;
+}
+.ribbon span:after {
+    content: "";
+    position:absolute;
+    top:3em;
+    right:0;
+    border-left:0.5em solid #9B8651;
+    border-bottom:0.5em solid #fff;
+}
+/*END ribbon navigation menu taken from internet*/

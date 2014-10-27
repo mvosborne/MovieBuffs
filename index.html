@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Movie Buffs</title>
+<link href="style.css" rel="stylesheet">
+<link href="smallBars.css" rel="stylesheet">
+<link href="forceSearch.css" rel="stylesheet">
+
+<!--D3-->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<!--FONTS-->
+<link href='http://fonts.googleapis.com/css?family=Coda+Caption:800' rel='stylesheet' type='text/css'>
+
+</head>
+
+<body>
+	<div class="inline">
+		<p class="title">Movie Buffs</p>
+		<!--NAVIGATION BAR-->
+		<!--<div class='ribbon'>
+		<a href='#'><span>Home</span></a>
+		<a href='help.html'><span>Instructions</span></a>
+		<a href='doc.html'><span>Documentation</span></a>
+		</div>-->
+	</div>
+<br/>
+<br/>
+<br/>
+<br/>
+	<div style="background-color: white">
+	<div id='heading' class="sans">
+<h2>The Movie Buff's Visualization: Explore Actors and Movies</h2>
+Search for a movie or actor and click on a movie to add it to the graph, then add more movies to the graph!<br/>
+Click on actors in the graph to find more movies that actor has been in, and also get their personal information!
+</div>
+
+<form action="" id="searchform" class="sans">
+<input id="searchmovie" type="radio" name="searchfor" value="movie" checked="true">Movie
+<input id="searchactor" type="radio" name="searchfor" value="actor">Actor
+</form>
+<input id="txt" type="text" onkeyup="keyup()" placeholder="Search For..."/>
+<input id="butt" type="button" onclick="onenter()" value="Search"/>
+<!-- <input id="clear" type="button" onclick="map_remove()" value="Clear Vis"/> -->
+<span style="clear:both;"></span>
+<div id='search_results'></div>
+<div id='name'></div>
+<div id="detTitle">Biography or Movie Overview<br> [select actor or movie]</div>
+<div id='det'></div>
+<div id='vis'></div>
+
+
+<script language="javascript" type="text/javascript">
+var force_width = 928;
+var force_height = 550;
+var api_key = '3d705bef250a99c453f9df413c2bb4ef'; //for the movie database api
+
+var force = d3.layout.force()
+var graph = {};
+graph.nodes = [];
+graph.links = [];
+graph.indexOf = function(node) {
+  var index = -1
+  for (var i=0; i<graph.nodes.length && index == -1; i++) {
+    if (graph.nodes[i].name == node.name)
+      index = i;
+  }
+  return index;
+};
+
+var svg = d3.select("#vis").append("svg")
+  .attr("width", "100%")
+  .attr("height", force_height)
+ .attr("pointer-events", "all")
+    .call(d3.behavior.zoom().on("zoom", redraw))
+  .append('svg:g');
+
+svg.append('rect')
+  .attr('width', 6*force_width)
+  .attr('height', 6*force_height)
+  .attr('fill', 'white')
+  .attr('x', -3*force_width)
+  .attr('y', -3*force_height);
+
+var node;
+var link;
+var circle;
+//http://stackoverflow.com/questions/21338135/d3js-force-layout-destroy-and-reset
+function map_remove(){
+    //node.remove();
+    //link.remove();
+    //svg.remove();
+    //graph.nodes = [];
+    //graph.links=[];
+    //var d3Brush = this.brush;
+nodes = [];
+links = [];
+force.nodes(nodes);
+force.links(links);
+
+  //force.start();
+    //d3.select("svg").text("");
+    
+}
+
+
+//zoom and pan in div with node like div. Got this from http://bl.ocks.org/stepheneb/1182434 and edited it.
+function redraw() {
+  svg.attr("transform",
+      "translate(" + d3.event.translate + ")"
+      + " scale(" + d3.event.scale + ")");
+}
+
+//search for text in search bar when press enter
+function onenter() {
+  var dosearchactor = document.getElementById("searchactor").checked;
+  var dosearchmovie = document.getElementById("searchmovie").checked;
+  if(dosearchactor){
+    searchActorTxt();
+  } else if(dosearchmovie){
+    searchMovieTxt();
+    console.log("movie");
+  }
+}
+
+function keyup(){
+  if(event.which == 13 || event.keyCode == 13){
+  var dosearchactor = document.getElementById("searchactor").checked;
+  var dosearchmovie = document.getElementById("searchmovie").checked;
+  if(dosearchactor){
+    searchActorTxt();
+  } else if(dosearchmovie){
+    searchMovieTxt();
+    console.log("movie");
+  }
+}
+}
+
+//Search for actor txt input 
+function searchActorTxt(){
+  var txt_search = document.getElementById("txt").value;
+  //got the below  3 lines of xhr. code from the movie database API and editied the url to fit our needs
+  //we created in the if(this.readyState = 4 ) on our own
+  var xhr1 = new XMLHttpRequest();
+  xhr1.open("GET", "http://private-dacc-themoviedb.apiary-proxy.com/3/search/person?api_key=" + api_key + "&query=" + txt_search);
+  xhr1.setRequestHeader("Accept", "application/json");
+  xhr1.onreadystatechange = function () {
+    if (this.readyState == 4) {
+      //alert('Status: '+this.status+'\nHeaders: '+JSON.stringify(this.getAllResponseHeaders())+'\nBody: '+this.responseText);
+
+      var search_data = JSON.parse(this.responseText);
+      var person_results = search_data.results;
+      //console.log(movie_results);   for testing purposes
+      var movie_id;
+
+      var search_results = d3.select("#search_results")
+
+      var results = search_results.selectAll("div")
+       .data(person_results);
+
+      results.remove();
+
+      if (person_results.length == 0) {
+        results.append("div")
+          .text("No results");
+      }
+
+      results.enter().append("div")
+        .attr("class","result")
+        .text(function(d) {
+            return  "" + d.name ;  
+        })
+        //.style("text-decoraction", "underline") //try and make it look like a link
+        .on("mouseover", function(d){
+          d3.select(this).style("background-color", "#FFD700")
+        })
+        .on("mouseout", function(d){
+          d3.select(this).style("background-color", "#fff")
+        })
+        .on("click", function (d) { return searchActor(d.id); });
+
+      results.exit().remove();
+
+    } //end ready state 4
+  };//end ready state function 
+  xhr1.send(null);
+}
+
+//Search for movie txt input by user
+function searchMovieTxt(){
+  var txt_search = document.getElementById("txt").value;
+  
+  //console.log(document.getElementById("searchactor").checked);
+  //got the below  3 lines of xhr. code from the movie database API and editied the url to fit our needs
+  //we created in the if(this.readyState = 4 ) on our own
+  var xhr1 = new XMLHttpRequest();
+  xhr1.open("GET", "http://private-dacc-themoviedb.apiary-proxy.com/3/search/movie?api_key=" + api_key + "&query=" + txt_search);
+  xhr1.setRequestHeader("Accept", "application/json");
+  xhr1.onreadystatechange = function () {
+    if (this.readyState == 4) {
+      //alert('Status: '+this.status+'\nHeaders: '+JSON.stringify(this.getAllResponseHeaders())+'\nBody: '+this.responseText);
+
+      var search_data = JSON.parse(this.responseText);
+      var movie_results = search_data.results;
+      //console.log(movie_results);   for testing purposes
+      var movie_id;
+
+      var search_results = d3.select("#search_results")
+
+      var results = search_results.selectAll("div")
+       .data(movie_results);
+
+      results.remove();
+
+      if (movie_results.length == 0) {
+        results.append("div")
+          .text("No results");
+      }
+
+      results.enter().append("div")
+        .attr("class","result")
+        .text(function(d) {
+            return  "" + d.title + " (" + d.release_date + ")";  
+        })
+        //.style("text-decoraction", "underline") //try and make it look like a link
+        .on("mouseover", function(d){
+          d3.select(this).style("background-color", "#FFD700")
+        })
+        .on("mouseout", function(d){
+          d3.select(this).style("background-color", "#fff")
+        })
+        .on("click", function (d) { return searchMovieCast(d.id, d.title); });
+
+      results.exit().remove();
+
+    } //end ready state 4
+  };//end ready state function 
+  xhr1.send(null);
+}
+
+
+//Search for movie id credits after got it from txt search
+function searchMovieCast(movie_id, movie_title) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "http://api.themoviedb.org/3/movie/" + movie_id + "/credits?api_key=" + api_key);
+  xhr.setRequestHeader("Accept", "application/json");
+  xhr.onreadystatechange = function () {
+    if (this.readyState == 4) {
+      var data = JSON.parse(this.responseText);
+
+      var groups = {
+        MOVIE: 0,
+        PERSON: 1,
+      };
+      searchMovie(movie_id);
+      force.stop();
+
+      var movie = {"name":movie_title,"group":groups.MOVIE}
+      var adding_movie = graph.indexOf(movie) == -1;
+      if (adding_movie)
+       graph.nodes.push(movie);
+      for (var i=0; i<data.cast.length; i++) {
+        var person = {"name":data.cast[i].name,"group":i+1, "id":data.cast[i].id, "character":data.cast[i].character};
+        if (graph.indexOf(person) == -1) {
+          graph.nodes.push(person);
+        }
+        if (adding_movie) {
+          var person_index = graph.indexOf(person);
+          var movie_index = graph.indexOf(movie);
+          graph.links.push({"source":person_index,"target":movie_index,"value":1});
+        }
+      }
+
+      //color scale for the nodes.
+      var color = d3.scale.linear()
+        .range(['#DAA520', '#EEE8AA']) // or use hex values
+        .domain([0, data.cast.length]);
+
+
+
+      force
+        //.gravity(.01)
+        .charge(-900) // use something like -120 to move nodes closer together
+        .linkDistance(function (d, i) {
+          return i*0.8 +80;
+        })
+        .size([force_width, force_height]);
+
+      force
+        .nodes(graph.nodes)
+        .links(graph.links)
+        .start();
+
+      link = svg.selectAll(".link")
+        .data(graph.links);
+
+      link.enter().append("line")
+        .attr("class", "link")
+        .style("stroke-width", function(d) { return d.value; });
+
+      link.exit().remove();
+
+      node = svg.selectAll(".node")
+        .data(graph.nodes);
+
+      var nodeEnter = node.enter()
+        .append("g")
+        .attr("class", "node");
+
+      nodeEnter.append("circle")
+        .attr("class", "circle")
+        .attr("r", 7)
+        .style("fill", function(d, i) { 
+          if (d.group == groups.MOVIE)
+            return "#000000";
+          else
+            return color(d.group); })
+        .on("click", function(d) {
+        if(d.group == groups.MOVIE)
+          return searchMovie(movie_id);
+        else 
+          return searchActor(d.id); })
+        .append("title")
+          .text(function(d) { return d.character; });
+
+      nodeEnter.append("text") // can change "text" to "title" to display on hover
+        .attr("class", "label")
+        .attr("text-anchor", "middle")
+        .attr("dx", 0)
+        .attr("dy", -8)
+        .text(function(d) { return d.name; })
+        .style("text-size", function(d,i){
+          if(d.index == 0)
+            return "20px";
+          else
+            return "11px";
+        });
+
+      node.exit().remove();
+
+      force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+
+        node.call(force.drag);
+        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+      });
+    };
+  };
+  xhr.send(null);
+}
+
+//search for movie to display info and poster
+function searchMovie(movie_id){
+  var xhr2 = new XMLHttpRequest();
+  xhr2.open("GET", "http://api.themoviedb.org/3/movie/" + movie_id +"?api_key=" + api_key);
+  xhr2.setRequestHeader("Accept", "application/json");
+  xhr2.onreadystatechange = function () {
+    if (this.readyState == 4) {
+      //setMovieData(person_id);
+
+      var movie_data = JSON.parse(this.responseText);
+      var movie_id;
+
+          var detTitleText = d3.selectAll("#detTitle");
+          detTitleText.html("Overview");
+          detTitleText.append("div")
+          .text(movie_data.title);
+
+          //var actor_det_results = d3.select('#det');
+          var det_text = d3.selectAll("#det");
+            //.data(actor_det);
+            det_text.html("");
+            det_text.append("img")
+            .attr("src", "http://d3gtl9l2a4fn1j.cloudfront.net/t/p/original" + movie_data.poster_path)
+            .attr("width", 150)
+            .attr("height", 200);
+            det_text.append("div")
+            .text(function(d) {
+              if(movie_data.overview)
+                return movie_data.overview;
+              else
+                return "No Overview Available";
+            });
+
+            
+
+          //console.log(actor_det.biography);
+
+          //results.exit().remove();
+          //http://image.tmdb.org/t/p/original
+          //http://d3gtl9l2a4fn1j.cloudfront.net/t/p/original
+
+      }//end ready state 4 outer query
+  };//end onreadystatechange on outer query
+  xhr2.send(null);
+}//end searchMovie
+
+
+//Search for txt input by user
+function searchActor(person_id){
+  var xhr2 = new XMLHttpRequest();
+  xhr2.open("GET", "http://private-dacc-themoviedb.apiary-proxy.com/3/person/" + person_id +"/movie_credits?api_key=" + api_key);
+  xhr2.setRequestHeader("Accept", "application/json");
+  xhr2.onreadystatechange = function () {
+    if (this.readyState == 4) {
+      
+      //alert('Status: '+this.status+'\nHeaders: '+JSON.stringify(this.getAllResponseHeaders())+'\nBody: '+this.responseText);
+
+      var search_actor_data = JSON.parse(this.responseText);
+      var actor_results = search_actor_data.cast;
+      var movie_id;
+
+      //get details on demand for actor
+      var xhr3  = new XMLHttpRequest();
+      xhr3.open("GET", "http://api.themoviedb.org/3/person/" + person_id +"?api_key=" + api_key);
+      xhr3.setRequestHeader("Accept", "application/json");
+      xhr3.onreadystatechange = function () {
+        if (this.readyState == 4) {
+          var actor_det = JSON.parse(this.responseText);
+          var actor_name = actor_det.name;//use to title the list of movies
+          setMovieData(person_id, actor_det.name);
+          var actor_search_results = d3.select("#search_results")
+
+          var results = actor_search_results.selectAll("div")//title actor search results
+            .data(actor_results);
+
+          results.remove();
+
+          actor_search_results.append("div")
+                .text("Movies with " + actor_name)
+				  .style("font-size", "12px")
+                  .style("font-weight","bold")
+
+          results.enter().append("div")
+            .attr("class","result")
+            .text(function(d) {
+              for (var l = 0; l < actor_results.length; l++) { 
+                return  "" + d.title + " (" + d.release_date+")";  
+              }
+            })
+        .on("mouseover", function(d){
+          d3.select(this).style("background-color", "#FFD700")
+        })
+        .on("mouseout", function(d){
+          d3.select(this).style("background-color", "#fff")
+        })
+        .on("click", function (d) {
+          return searchMovieCast(d.id, d.title); });
+
+          var title_search_results = d3.select('#det');//title the actor search results
+          var title_name = title_search_results.select("#name")
+            .data(actor_det);
+
+          title_name.exit().remove();
+          
+          var detTitleText = d3.selectAll("#detTitle");
+          detTitleText.html("Biography");
+          detTitleText.append("div")
+          .text(actor_det.name);
+
+          //var actor_det_results = d3.select('#det');
+          var det_text = d3.selectAll("#det");
+            //.data(actor_det);
+            det_text.html("");
+            det_text.append("img")
+            .attr("src", "http://d3gtl9l2a4fn1j.cloudfront.net/t/p/original" + actor_det.profile_path)
+            .attr("width", 150)
+            .attr("height", 200);
+            det_text.append("div")
+            .text(function(d) {
+              if(actor_det.biography)
+                return actor_det.biography;
+              else
+                return "No Bio Available";
+            });
+
+            
+
+          //console.log(actor_det.biography);
+
+          results.exit().remove();
+          //http://image.tmdb.org/t/p/original
+          //http://d3gtl9l2a4fn1j.cloudfront.net/t/p/original
+        }//end ready state 4 inner query for details on demand
+      };//end on readystatechange inner query for details on demand
+      xhr3.send(null);
+
+      }//end ready state 4 outer query
+  };//end onreadystatechange on outer query
+  xhr2.send(null);
+}//end searchActor function
+</script>
+
+	<div id='movie_data'></div>
+	<script src="smallBars.js"></script>
+</div>
+</body>
+</html>
